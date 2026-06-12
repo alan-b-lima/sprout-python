@@ -1,18 +1,17 @@
+from   internal  import net
+from   pkg.error import Result, Ok, Err, error
 import socket
 import threading
-from pkg.error import Result, Ok, Err, error
-
-type addr = tuple[str, int]
 
 class Conn:
-    _addr: addr
+    _addr: net.Addr
     _sock: socket.socket
 
     _wait: bool
     _done: bool
-    _mu: threading.Lock
+    _mu:   threading.Lock
 
-    def __init__(self, sock: socket.socket, addr: addr) -> None:
+    def __init__(self, sock: socket.socket, addr: net.Addr) -> None:
         self._addr = addr
         self._sock = sock
         self._wait = False
@@ -43,7 +42,7 @@ class Conn:
             with self._mu:
                 self._wait = False
 
-    def Addr(self) -> addr:
+    def Addr(self) -> net.Addr:
         return self._addr
 
     def Close(self) -> Result[None, Exception]:
@@ -69,14 +68,14 @@ class Conn:
             return self._done
 
 class Listener:
-    _addr: addr
+    _addr: net.Addr
     _sock: socket.socket
 
     _conns: list[Conn]
     _done: bool
     _mu: threading.Lock
 
-    def __init__(self, fd: socket.socket, addr: addr) -> None:
+    def __init__(self, fd: socket.socket, addr: net.Addr) -> None:
         self._addr = addr
         self._sock = fd
         self._conns = []
@@ -95,7 +94,7 @@ class Listener:
         except OSError as ex:
             return Err(error("accept", ex))
 
-    def Addr(self) -> addr:
+    def Addr(self) -> net.Addr:
         return self._addr
 
     def Close(self) -> None:
@@ -113,7 +112,7 @@ class Listener:
         with self._mu:
             return self._done
 
-def Dial(addr: addr) -> Result[Conn, Exception]:
+def Dial(addr: net.Addr) -> Result[Conn, Exception]:
     try:
         fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         fd.connect(addr)
@@ -124,7 +123,7 @@ def Dial(addr: addr) -> Result[Conn, Exception]:
     
     return Ok(Conn(fd, addr))
 
-def Listen(addr: addr) -> Result[Listener, Exception]:
+def Listen(addr: net.Addr) -> Result[Listener, Exception]:
     try:
         fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         fd.bind(addr)
