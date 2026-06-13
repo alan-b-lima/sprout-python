@@ -7,88 +7,70 @@ class Conn:
     _addr: net.Addr
     _sock: socket.socket
 
-    _wait: bool
     _done: bool
     _mu:   threading.Lock
 
     def __init__(self, sock: socket.socket, addr: net.Addr) -> None:
         self._addr = addr
         self._sock = sock
-        self._wait = False
         self._done = False
-        self._mu = threading.Lock()
+        self._mu   = threading.Lock()
 
     def Read(self, n: int) -> Result[bytes, Exception]:
-        with self._mu:
-            self._wait = True
-
         try:
             return Ok(self._sock.recv(n))
+
         except OSError as ex:
             return Err(error("conn read", ex))
-        finally:
-            with self._mu:
-                self._wait = False
 
     def Write(self, data: bytes) -> Result[int, Exception]:
-        with self._mu:
-            self._wait = False
-
         try:
             return Ok(self._sock.send(data))
+
         except OSError as ex:
             return Err(error("conn aborted", ex))
-        finally:
-            with self._mu:
-                self._wait = False
 
     def Addr(self) -> net.Addr:
         return self._addr
 
-    def Close(self) -> Result[None, Exception]:
+    def Close(self) -> None:
         with self._mu:
             if self._done == True:
-                return Ok(None)
-
+                return
             self._done = True
 
-        try:
-            with self._mu:
-                if self._wait == True:
-                    self._sock.shutdown(socket.SHUT_RDWR)            
-
-            self._sock.close()
-            return Ok(None)
-
-        except OSError as ex:
-            return Err(error("conn close", ex))
+        net.Shutdown(self._sock)
 
     def Done(self) -> bool:
         with self._mu:
             return self._done
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, ex_t: object, ex_v: object, tb: object):
+        self.Close()
 
 class Listener:
     _addr: net.Addr
     _sock: socket.socket
 
     _conns: list[Conn]
-    _done: bool
-    _mu: threading.Lock
+    _done:  bool
+    _mu:    threading.Lock
 
-    def __init__(self, fd: socket.socket, addr: net.Addr) -> None:
-        self._addr = addr
-        self._sock = fd
+    def __init__(self, sock: socket.socket) -> None:
+        self._addr  = sock.getsockname()
+        self._sock  = sock
         self._conns = []
-        self._done = False
-        self._mu = threading.Lock()
+        self._done  = False
+        self._mu    = threading.Lock()
 
     def Accept(self) -> Result[Conn, Exception]:
         try:
             sock, addr = self._sock.accept()
             conn = Conn(sock, addr)
-            with self._mu:
-                self._conns.append(conn)
-
+            self._add(conn)
             return Ok(conn)
 
         except OSError as ex:
@@ -98,6 +80,8 @@ class Listener:
         return self._addr
 
     def Close(self) -> None:
+        net.Shutdown(self._sock)
+
         with self._mu:
             if self._done == True:
                 return
@@ -106,11 +90,26 @@ class Listener:
             for conn in self._conns:
                 conn.Close()
 
-        self._sock.close()
-
     def Done(self) -> bool:
         with self._mu:
             return self._done
+
+    def _add(self, conn: Conn) -> None:
+        with self._mu:
+            i = 0
+            for c in self._conns:
+                if c.Done():
+                    self._conns[i] = c
+                    i += 1
+
+            self._conns = self._conns[:i]
+            self._conns.append(conn)
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, ex_t: object, ex_v: object, tb: object):
+        self.Close()
 
 def Dial(addr: net.Addr) -> Result[Conn, Exception]:
     try:
@@ -133,4 +132,4 @@ def Listen(addr: net.Addr) -> Result[Listener, Exception]:
         ip, port = addr
         return Err(error(f"listen to {ip}:{port}", ex))
     
-    return Ok(Listener(fd, addr))
+    return Ok(Listener(fd))
