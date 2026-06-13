@@ -1,11 +1,13 @@
-def Decode(b: bytes) -> tuple[str, bool]:
-    try:
-        return b.decode("utf-8"), True
-    except UnicodeDecodeError:
-        return "", False
+from pkg.error import Result, Ok, Err
 
-def Encode(s: str) -> tuple[bytes, bool]:
+def Decode(b: bytes) -> Result[str, None]:
     try:
-        return s.encode("utf-8"), True
+        return Ok(b.decode("utf-8"))
+    except UnicodeDecodeError:
+        return Err(None)
+
+def Encode(s: str) -> Result[bytes, None]:
+    try:
+        return Ok(s.encode("utf-8"))
     except UnicodeEncodeError:
-        return bytes(), False
+        return Err(None)
