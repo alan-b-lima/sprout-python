@@ -1,4 +1,5 @@
-from pkg.error import Result, Ok, Err, error
+import socket
+from   pkg.error import Result, Ok, Err, error
 
 type Addr = tuple[str, int]
 
@@ -23,3 +24,10 @@ def ParseAddr(str: str) -> Result[Addr, Exception]:
         port = 0
 
     return Ok((ip, port))
+
+def Shutdown(sock: socket.socket) -> Exception | None:
+    try:
+        sock.shutdown(socket.SHUT_RDWR)
+        sock.close()
+    except OSError as ex:
+        return ex
