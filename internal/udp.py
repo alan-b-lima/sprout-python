@@ -6,12 +6,9 @@ class Listener:
     _addr: net.Addr
     _sock: socket.socket
     
-    def __init__(self, addr: net.Addr) -> None:
-        fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        fd.bind(addr)
-
-        self._addr = addr
-        self._sock = fd
+    def __init__(self, sock: socket.socket) -> None:
+        self._addr = sock.getsockname()
+        self._sock = sock
 
     def ReadFrom(self, n: int) -> Result[tuple[bytes, net.Addr], Exception]:
         try:
@@ -32,11 +29,20 @@ class Listener:
         return self._addr
 
     def Close(self) -> None:
-        self._sock.close()
+        net.Shutdown(self._sock)
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, ex_t: object, ex_v: object, tb: object):
+        self.Close()
 
 def Listen(addr: net.Addr) -> Result[Listener, Exception]:
     try:
-        return Ok(Listener(addr))
+        fd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        fd.bind(addr)
+
+        return Ok(Listener(fd))
 
     except OSError as ex:
         return Err(error("listener", ex))
