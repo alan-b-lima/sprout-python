@@ -1,6 +1,6 @@
+from   pkg.error import error
 import threading
-from typing import Callable
-from pkg.error import error
+from   typing    import Callable
 
 def Go(func: Callable[[], None]) -> None:
     if not callable(func):
