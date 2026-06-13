@@ -1,5 +1,7 @@
 import cmds.ex1.client
 import cmds.ex1.server
+import cmds.ex4.client
+import cmds.ex4.server
 from   internal import net
 import sys
 
@@ -19,6 +21,9 @@ def main():
     match ex, dom:
         case ("ex1", "client"): cmds.ex1.client.Handle(addr)
         case ("ex1", "server"): cmds.ex1.server.Handle(addr)
+
+        case ("ex4", "client"): cmds.ex4.client.Handle(addr)
+        case ("ex4", "server"): cmds.ex4.server.Handle(addr)
 
         case _:
             print("unknown exercise")
