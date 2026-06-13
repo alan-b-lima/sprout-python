@@ -10,8 +10,10 @@ def Handle(addr: net.Addr) -> None:
 
     conn = conn.Val()
 
-    ip, port = conn.Addr()
-    print(f"connection listening at {ip}:{port}")
+    lip, lport = conn.LocalAddr()
+    rip, rport = conn.RemoteAddr()
+
+    print(f"connection established to {rip}:{rport} from {lip}:{lport}")
 
     with conn:
         try:
@@ -33,26 +35,38 @@ def Handle(addr: net.Addr) -> None:
                     print(f"write: {err.Err()}")
                     break
 
-                res = read(conn, "OK\n")
+                res = _read(conn, "OK\n")
                 if not res.Ok():
-                    print(f"error: {res.Err()}")
+                    print(f"read: {res.Err()}")
                     break
         
                 print("sent!")
 
         except KeyboardInterrupt:
             print("\r", end="")
-            err = conn.Write(b"\003")
-            if not err.Ok():
-                print(f"write: {err.Err()}")
-                return
+            
+        err = conn.Write(b"\003")
+        if not err.Ok():
+            print(f"write: {err.Err()}")
+            return
 
-def read(conn: tcp.Conn, sentinel: str) -> Result[None, Exception]:
-    b = conn.Read(len(sentinel))
-    if not b.Ok():
-        return Err(b.Err())
+        res = _read(conn, "BYE\n")
+        if not res.Ok():
+            print(f"read: {res.Err()}")
+            return
 
-    msg = utf8.Decode(b.Val())
+        print("bye!")
+
+def _read(conn: tcp.Conn, sentinel: str) -> Result[None, Exception]:
+    b = bytearray(len(sentinel))
+
+    err = conn.Read(b)
+    if not err.Ok():
+        return Err(err.Err())
+    
+    print(b)
+
+    msg = utf8.Decode(b)
     if not msg.Ok() or msg.Val() != sentinel:
         return Err(error("malformed response"))
 
