@@ -4,21 +4,24 @@ import socket
 import threading
 
 class Conn:
-    _addr: net.Addr
-    _sock: socket.socket
+    _laddr: net.Addr
+    _raddr: net.Addr
+    _sock:  socket.socket
 
     _done: bool
     _mu:   threading.Lock
 
-    def __init__(self, sock: socket.socket, addr: net.Addr) -> None:
-        self._addr = addr
+    def __init__(self, sock: socket.socket) -> None:
+        self._laddr = sock.getsockname()
+        self._raddr = sock.getpeername()
+
         self._sock = sock
         self._done = False
         self._mu   = threading.Lock()
 
-    def Read(self, n: int) -> Result[bytes, Exception]:
+    def Read(self, data: bytearray) -> Result[int, Exception]:
         try:
-            return Ok(self._sock.recv(n))
+            return Ok(self._sock.recv_into(data))
 
         except OSError as ex:
             return Err(error("conn read", ex))
@@ -30,8 +33,11 @@ class Conn:
         except OSError as ex:
             return Err(error("conn aborted", ex))
 
-    def Addr(self) -> net.Addr:
-        return self._addr
+    def LocalAddr(self) -> net.Addr:
+        return self._laddr
+
+    def RemoteAddr(self) -> net.Addr:
+        return self._raddr
 
     def Close(self) -> None:
         with self._mu:
@@ -68,8 +74,8 @@ class Listener:
 
     def Accept(self) -> Result[Conn, Exception]:
         try:
-            sock, addr = self._sock.accept()
-            conn = Conn(sock, addr)
+            sock, _ = self._sock.accept()
+            conn = Conn(sock)
             self._add(conn)
             return Ok(conn)
 
@@ -120,7 +126,7 @@ def Dial(addr: net.Addr) -> Result[Conn, Exception]:
         ip, port = addr
         return Err(error(f"dial at {ip}:{port}", ex))
     
-    return Ok(Conn(fd, addr))
+    return Ok(Conn(fd))
 
 def Listen(addr: net.Addr) -> Result[Listener, Exception]:
     try:

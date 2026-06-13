@@ -10,10 +10,10 @@ class Listener:
         self._addr = sock.getsockname()
         self._sock = sock
 
-    def ReadFrom(self, n: int) -> Result[tuple[bytes, net.Addr], Exception]:
+    def ReadFrom(self, data: bytearray) -> Result[tuple[int, net.Addr], Exception]:
         try:
-            bytes, addr = self._sock.recvfrom(n)
-            return Ok((bytes, addr))
+            n, addr = self._sock.recvfrom_into(data, len(data))
+            return Ok((n, addr))
 
         except OSError as ex:
             return Err(error("read from", ex))
