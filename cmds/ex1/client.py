@@ -63,8 +63,6 @@ def _read(conn: tcp.Conn, sentinel: str) -> Result[None, Exception]:
     err = conn.Read(b)
     if not err.Ok():
         return Err(err.Err())
-    
-    print(b)
 
     msg = utf8.Decode(b)
     if not msg.Ok() or msg.Val() != sentinel:
