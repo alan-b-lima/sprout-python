@@ -1,10 +1,10 @@
 from internal import net, tcp
-from pkg      import log, utf8
+from pkg      import utf8
 
 def Handle(addr: net.Addr) -> None:
     conn = tcp.Dial(addr)
     if not conn.Ok():
-        log.Error(f"{conn.Err()}")
+        print(conn.Err())
         return
 
     conn = conn.Val()
@@ -13,14 +13,14 @@ def Handle(addr: net.Addr) -> None:
     with conn:
         n = conn.Read(buf)
         if not n.Ok():
-            log.Error(n.Err())
+            print(f"error: {n.Err()}")
             return
 
         n = n.Val()
         text = utf8.Decode(buf[:n])
         if not text.Ok():
-            log.Error("malformed response")
+            print(f"error: malformed response")
             return
 
         ip, port = conn.RemoteAddr()
-        log.Info(f"{ip}:{port}", text.Val())
+        print(f"time from {ip}:{port}: {text.Val()}")
