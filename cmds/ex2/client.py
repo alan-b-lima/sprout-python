@@ -1,8 +1,6 @@
 from internal  import net, udp
-from pkg       import utf8
+from pkg       import bits, utf8
 from pkg.error import Result, Ok, Err
-
-KiB = 1024
 
 def Handle(addr: net.Addr) -> None:
     conn = udp.Dial(addr)
@@ -59,7 +57,7 @@ def Handle(addr: net.Addr) -> None:
     conn.Close()
 
 def _tobytes(s: str) -> Result[bytes, Exception]:
-    if len(s) > 64*KiB:
+    if len(s) > 64*bits.KiB:
         return Err(ValueError("message too long"))
 
     b = utf8.Encode(s)
@@ -67,7 +65,7 @@ def _tobytes(s: str) -> Result[bytes, Exception]:
         return Err(ValueError("malformed string"))
     
     b = b.Val()
-    if len(b) > 64*KiB:
+    if len(b) > 64*bits.KiB:
         return Err(ValueError("message too long"))
 
     return Ok(b)
