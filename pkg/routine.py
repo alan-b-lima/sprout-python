@@ -1,8 +1,8 @@
 import queue
 import threading
-from   typing    import Callable
+from   typing import Any, Callable
 
-def Go(func: Callable[[], None]) -> None:
+def Go(func: Callable[[], Any]) -> None:
     if not callable(func):
         raise ValueError("not callable")
 
