@@ -1,13 +1,13 @@
 from pkg.error import Result, Ok, Err
 
-def Decode(b: bytes) -> Result[str, None]:
+def Decode(b: bytes) -> Result[str, UnicodeDecodeError]:
     try:
         return Ok(b.decode("utf-8"))
-    except UnicodeDecodeError:
-        return Err(None)
+    except UnicodeDecodeError as ex:
+        return Err(ex)
 
-def Encode(s: str) -> Result[bytes, None]:
+def Encode(s: str) -> Result[bytes, UnicodeEncodeError]:
     try:
         return Ok(s.encode("utf-8"))
-    except UnicodeEncodeError:
-        return Err(None)
+    except UnicodeEncodeError as ex:
+        return Err(ex)
